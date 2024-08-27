@@ -18,11 +18,11 @@ public class UrlHandlerMappingConfig {
             final DownloadController controller,
             @Qualifier("fileStorageProperties") final FileStorageProperties properties
     ) throws NoSuchMethodException {
-        final RequestMappingInfo mapping = RequestMappingInfo.paths(String.format("%s/{fileName:.+}", properties.getUrlDownload()))
+        final RequestMappingInfo mapping = RequestMappingInfo.paths(String.format("/%s/{directory}/{fileName:.+}", properties.getUrlDownload()))
                 .methods(RequestMethod.GET)
                 .build();
         handlerMapping.unregisterMapping(mapping);
-        handlerMapping.registerMapping(mapping, controller, DownloadController.class.getMethod("getFile", String.class));
+        handlerMapping.registerMapping(mapping, controller, DownloadController.class.getMethod("getFile", String.class, String.class));
     }
 
 }

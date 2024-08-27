@@ -33,34 +33,36 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     public FileStorageServiceImpl(@Qualifier("fileStorageProperties") FileStorageProperties properties) {
         this.rootLocation = Paths.get(properties.getRoot());
-        this.urlDownload = String.format("/%s/", properties.getUrlDownload());
+        this.urlDownload = String.format("%s", properties.getUrlDownload());
         this.properties = properties;
     }
 
     @Override
     @PostConstruct
     public void init() {
-        if (Files.notExists(rootLocation)) {
-            try {
-                Files.createDirectories(rootLocation);
-            } catch (IOException e) {
-                throw new FileStorageException("Could not initialize storage root location", e);
-            }
-        }
+        createDirectoryIsNotExists(rootLocation);
     }
 
     @Override
     public FileResponse upload(MultipartFile file) throws FileStorageException {
-        String fileName = FileUtils.generateUniqueFileName(file.getOriginalFilename());
-        if (Files.exists(rootLocation.resolve(fileName))) {
+        String parentDirectory = FileUtils.generateRandomString(properties.getNewDirectoryLenght());
+        Path directory = Paths.get(rootLocation.toString(), parentDirectory).normalize();
+        createDirectoryIsNotExists(directory);
+
+        String fileName = FileUtils.generateUniqueFileName(StringUtils.cleanPath(file.getOriginalFilename()));
+
+        Path pathForSave = Paths.get(directory.toString(), fileName).normalize();
+        if (Files.exists(pathForSave)) {
             throw new FileStorageException(String.format("Failed to store file %s (File already exists)", fileName));
         }
+
         try (InputStream inputStream = file.getInputStream()) {
-            Files.copy(inputStream, rootLocation.resolve(fileName));
+            Files.copy(inputStream, pathForSave);
         } catch (IOException e) {
             throw new FileStorageException(String.format("Failed to store file %s (%s)", fileName, e.getMessage()), e);
         }
-        return new FileResponse(fileName, buildUri(fileName), file.getContentType(), file.getSize());
+
+        return new FileResponse(fileName, parentDirectory, buildUri(parentDirectory, fileName), file.getContentType(), file.getSize());
     }
 
     @Override
@@ -69,13 +71,13 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     @Override
-    public FileResponse get(String fileName) throws FileStorageException {
-        Path filePath = rootLocation.resolve(fileName);
-        if (!Files.isReadable(rootLocation.resolve(filePath))) {
+    public FileResponse get(String directory, String fileName) throws FileStorageException {
+        Path filePath = Paths.get(rootLocation.toString(), directory, fileName).normalize();
+        if (!Files.isReadable(filePath)) {
             throw new FileStorageException(String.format("File %s is not readable", fileName));
         }
         try {
-            return new FileResponse(fileName, buildUri(fileName), Files.probeContentType(filePath), Files.size(filePath));
+            return new FileResponse(fileName, directory, buildUri(directory, fileName), Files.probeContentType(filePath), Files.size(filePath));
         } catch (IOException e) {
             throw new FileStorageException(String.format("Failed to get file info %s (%s)", fileName, e.getMessage()), e);
         }
@@ -84,16 +86,19 @@ public class FileStorageServiceImpl implements FileStorageService {
     @Override
     public List<FileResponse> getAll() throws FileStorageException {
         try {
-            return Files.list(rootLocation).map(path -> get(StringUtils.cleanPath(path.toFile().getName()))).collect(Collectors.toList());
+            return Files.walk(rootLocation)
+                    .filter(Files::isRegularFile)
+                    .map(path -> get(path.getParent().getFileName().toString(), path.getFileName().getFileName().toString()))
+                    .collect(Collectors.toList());
         } catch (IOException e) {
             throw new FileStorageException(String.format("Failed to get files info (%s)", e.getMessage()), e);
         }
     }
 
     @Override
-    public Resource getFile(String fileName) throws FileStorageException {
-        Path filePath = rootLocation.resolve(fileName);
-        if (!Files.isReadable(rootLocation.resolve(filePath))) {
+    public Resource getFile(String directory, String fileName) throws FileStorageException {
+        Path filePath = Paths.get(rootLocation.toString(), directory, fileName).normalize();
+        if (!Files.isReadable(filePath)) {
             throw new FileStorageException(String.format("File %s is not readable", fileName));
         }
         try {
@@ -104,8 +109,8 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     @Override
-    public void delete(String fileName) throws FileStorageException {
-        Path filePath = rootLocation.resolve(fileName);
+    public void delete(String directory, String fileName) throws FileStorageException {
+        Path filePath = Paths.get(rootLocation.toString(), directory, fileName).normalize();
         if (!Files.isWritable(rootLocation.resolve(filePath))) {
             throw new FileStorageException(String.format("File %s is not readable", fileName));
         }
@@ -129,13 +134,8 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     @Override
-    public boolean exists(String fileName) {
-        return Files.exists(rootLocation.resolve(fileName));
-    }
-
-    @Override
-    public boolean notExists(String fileName) {
-        return Files.notExists(rootLocation.resolve(fileName));
+    public boolean notExists(String directory, String fileName) {
+        return Files.notExists(Paths.get(rootLocation.toString(), directory, fileName).normalize());
     }
 
     @Override
@@ -144,11 +144,21 @@ public class FileStorageServiceImpl implements FileStorageService {
         return types == null || types.isEmpty() || types.contains(type);
     }
 
-    public String buildUri(String fileName) {
+    private void createDirectoryIsNotExists(Path pathDirectory) throws FileStorageException {
+        try {
+            if (Files.notExists(pathDirectory)) {
+                Files.createDirectories(pathDirectory);
+            }
+        } catch (IOException e) {
+            throw new FileStorageException(String.format("Failed to store directory  %s (%s)", pathDirectory, e.getMessage()), e);
+        }
+    }
+
+    public String buildUri(String directory, String fileName) {
         return ServletUriComponentsBuilder
                 .fromCurrentContextPath()
-                .path(urlDownload)
-                .path(fileName)
+                .pathSegment(urlDownload, directory, fileName)
+                .build()
                 .toUriString();
     }
 

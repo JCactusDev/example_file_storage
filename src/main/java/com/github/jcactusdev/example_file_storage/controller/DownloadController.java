@@ -19,16 +19,16 @@ public class DownloadController {
     @Autowired
     private FileStorageService service;
 
-    @GetMapping(value = "/{fileName:.+}")
+    @GetMapping(value = "/{directory}/{fileName:.+}")
     @ResponseBody
-    public ResponseEntity getFile(@PathVariable String fileName) {
-        if (service.notExists(fileName)) {
+    public ResponseEntity getFile(@PathVariable String directory, @PathVariable String fileName) {
+        if (service.notExists(directory, fileName)) {
             return ResponseEntity
                     .notFound()
                     .build();
         }
         try {
-            Resource resource = service.getFile(fileName);
+            Resource resource = service.getFile(directory, fileName);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + URLEncoder.encode(resource.getFilename(), StandardCharsets.UTF_8) + "\"")
                     .body(resource);

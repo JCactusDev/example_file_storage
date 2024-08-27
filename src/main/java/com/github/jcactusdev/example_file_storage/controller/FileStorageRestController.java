@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/storage")
@@ -23,8 +22,7 @@ public class FileStorageRestController {
     @ResponseBody
     public ResponseEntity upload(@RequestParam("file") MultipartFile file) {
         if (file == null
-                || file.isEmpty()
-                || Objects.requireNonNull(file.getOriginalFilename()).contains("..")) {
+                || file.isEmpty()) {
             return ResponseEntity
                     .badRequest()
                     .build();
@@ -69,15 +67,15 @@ public class FileStorageRestController {
         }
     }
 
-    @GetMapping("/get/{fileName:.+}")
-    public ResponseEntity getInfo(@PathVariable String fileName) {
-        if (service.notExists(fileName)) {
+    @GetMapping("/get/{directory}/{fileName:.+}")
+    public ResponseEntity get(@PathVariable String directory, @PathVariable String fileName) {
+        if (service.notExists(directory, fileName)) {
             return ResponseEntity
                     .notFound()
                     .build();
         }
         try {
-            return ResponseEntity.ok().body(service.get(fileName));
+            return ResponseEntity.ok().body(service.get(directory, fileName));
         } catch (FileStorageException e) {
             return ResponseEntity
                     .internalServerError()
@@ -86,7 +84,7 @@ public class FileStorageRestController {
     }
 
     @GetMapping("/getAll")
-    public ResponseEntity getInfoAll() {
+    public ResponseEntity getAll() {
         try {
             return ResponseEntity.ok().body(service.getAll());
         } catch (FileStorageException e) {
@@ -96,15 +94,15 @@ public class FileStorageRestController {
         }
     }
 
-    @DeleteMapping("/delete/{fileName:.+}")
-    public ResponseEntity delete(@PathVariable String fileName) {
-        if (service.notExists(fileName)) {
+    @DeleteMapping("/delete/{directory}/{fileName:.+}")
+    public ResponseEntity delete(@PathVariable String directory, @PathVariable String fileName) {
+        if (service.notExists(directory, fileName)) {
             return ResponseEntity
                     .notFound()
                     .build();
         }
         try {
-            service.delete(fileName);
+            service.delete(directory, fileName);
             return ResponseEntity
                     .noContent()
                     .build();

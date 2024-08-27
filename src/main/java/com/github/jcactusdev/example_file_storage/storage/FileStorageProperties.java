@@ -9,11 +9,20 @@ import java.util.List;
 @ConfigurationProperties(prefix = "storage")
 public class FileStorageProperties {
     private String root;
+    private int newDirectoryLenght = 4;
     private String urlDownload = "/download";
     private List<String> types;
 
     public String getRoot() {
         return root;
+    }
+
+    public int getNewDirectoryLenght() {
+        return newDirectoryLenght;
+    }
+
+    public void setNewDirectoryLenght(int newDirectoryLenght) {
+        this.newDirectoryLenght = newDirectoryLenght;
     }
 
     public void setRoot(String root) {

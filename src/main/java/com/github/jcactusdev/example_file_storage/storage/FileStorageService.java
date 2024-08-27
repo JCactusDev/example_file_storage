@@ -14,19 +14,17 @@ public interface FileStorageService {
 
     List<FileResponse> uploadMultiple(MultipartFile[] files);
 
-    FileResponse get(String fileName);
+    FileResponse get(String directory, String fileName);
 
     List<FileResponse> getAll();
 
-    Resource getFile(String fileName);
+    Resource getFile(String directory, String fileName);
 
-    void delete(String fileName);
+    void delete(String directory, String fileName);
 
     void deleteAll();
 
-    boolean exists(String fileName);
-
-    boolean notExists(String fileName);
+    boolean notExists(String directory, String fileName);
 
     boolean isAllowType(String type);
 }

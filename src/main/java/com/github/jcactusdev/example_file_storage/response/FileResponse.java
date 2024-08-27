@@ -2,12 +2,14 @@ package com.github.jcactusdev.example_file_storage.response;
 
 public class FileResponse {
     private String fileName;
+    private String directory;
     private String uri;
     private String type;
     private long size;
 
-    public FileResponse(String fileName, String uri, String type, long size) {
+    public FileResponse(String fileName, String directory, String uri, String type, long size) {
         this.fileName = fileName;
+        this.directory = directory;
         this.uri = uri;
         this.type = type;
         this.size = size;
@@ -19,6 +21,14 @@ public class FileResponse {
 
     public void setFileName(String fileName) {
         this.fileName = fileName;
+    }
+
+    public String getDirectory() {
+        return directory;
+    }
+
+    public void setDirectory(String directory) {
+        this.directory = directory;
     }
 
     public String getUri() {
